@@ -1,0 +1,79 @@
+const express = require('express');
+const nodemailer = require('nodemailer');
+const router = express.Router();
+const userController = require('../controllers/userController');
+
+// Configuración del servicio de correo electrónico
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+
+// Ruta para enviar actualización de productos a los usuarios
+router.post('/sendProductsUpdate', async (req, res) => {
+  const { products, message } = req.body;
+
+  let htmlMessage = '<h3>Productos actuales en la tienda:</h3><ul>';
+  products.forEach(product => {
+    htmlMessage += `<li>${product.title} - ${product.category}</li>`;
+  });
+  htmlMessage += '</ul>';
+  htmlMessage += `<p>${message}</p>`;
+
+  try {
+    // Obtener todos los usuarios utilizando el controlador
+    const users = await userController.getAllUsers();
+    if (!users.length) {
+      return res.status(404).json({ message: 'No se encontraron usuarios para enviar el correo.' });
+    }
+
+    // Enviar correo a cada usuario
+    for (const user of users) {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: 'Actualización de productos en la tienda',
+        html: htmlMessage,
+      };
+
+      await transporter.sendMail(mailOptions);
+    }
+
+    res.status(200).json({ message: 'Correo enviado con éxito a todos los usuarios.' });
+  } catch (error) {
+    console.error('Error al enviar correos:', error);
+    res.status(500).json({ message: 'Error al enviar correo', error: error.message });
+  }
+});
+
+
+// Ruta para enviar correos electrónicos de contacto
+router.post('/sendContactEmail', async (req, res) => {
+  const { name, email, message } = req.body;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: process.env.EMAIL_USER,
+    subject: `Nuevo contacto: ${name}`,
+    html: `<p><strong>Nombre:</strong> ${name}</p>
+           <p><strong>Email:</strong> ${email}</p>
+           <p><strong>Mensaje:</strong></p>
+           <p>${message}</p>`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: 'Correo de contacto enviado con éxito' });
+  } catch (error) {
+    console.error('Error al enviar correo de contacto:', error);
+    res.status(500).json({ message: 'Error al enviar correo de contacto', error: error.message });
+  }
+});
+
+
+
+module.exports = router;

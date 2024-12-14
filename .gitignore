@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Credentials and keys
+/credentials/
+/config/serviceAccountKey.json
+/config/firebase-key.json
+firebase-key.json
+*.key
+*.pem
+**/serviceAccountKey*.json
+
+# Database
+/config/config.json
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
