@@ -18,7 +18,7 @@ const app = express();
 // Logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Headers:', req.headers);
   next();
 });
 
@@ -34,7 +34,25 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.json());
 
-
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    await dbConnection.authenticate();
+    res.status(200).json({ 
+      status: 'OK',
+      dbStatus: 'Connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).json({ 
+      status: 'Error',
+      dbStatus: 'Disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // Rutas de autenticación
 app.use('/auth', authRoutes);
@@ -57,27 +75,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Algo salió mal. Intenta nuevamente.' });
 });
 
-// Health check endpoint
-app.get('/api/health', async (req, res) => {
-  console.log('Health check endpoint accessed');
-  try {
-    await dbConnection.authenticate();
-    res.status(200).json({ 
-      status: 'OK',
-      dbStatus: 'Connected',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Database connection error:', error);
-    res.status(500).json({ 
-      status: 'Error',
-      dbStatus: 'Disconnected',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
 
 // 404 handler
 app.use((req, res) => {
@@ -89,12 +86,9 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Global Error Handler:', {
-    message: err.message,
-    stack: err.stack
-  });
+  console.error('Global Error Handler:', err);
   res.status(500).json({ 
     error: 'Internal Server Error',
     message: err.message,
@@ -103,15 +97,10 @@ app.use((err, req, res, next) => {
 });
 
 // Server startup
-const PORT = process.env.PORT || 3001;
-
 if (process.env.NODE_ENV !== 'production') {
-  dbConnection.sync().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  }).catch(err => {
-    console.error('Unable to connect to the database:', err);
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
