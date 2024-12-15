@@ -9,6 +9,7 @@ const clientRoutes = require('./routes/clientRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const purchaseRoutes = require('./routes/purchasesRoutes');
+const testRoutes = require('./routes/testRoutes')
 const { dbConnection } = require('./config/db');
 require('dotenv').config();
 
@@ -28,8 +29,7 @@ app.use(bodyParser.json());
 
 // Debugging middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} request to ${req.url}`);
-  console.log('Origin:', req.get('Origin'));
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   console.log('Headers:', req.headers);
   next();
 });
@@ -45,31 +45,57 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api', testRoutes)
 
 // Ruta inicial
 app.get('/', (req, res) => res.send('Servidor corriendo...'));
 
-// Middleware de errores generales
+// Error handling middleware - must be last
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Algo salió mal. Intenta nuevamente.' });
+  console.error('Error:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: err.message,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Health check route
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK' });
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'Backend server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler - must come after all valid routes
+app.use((req, res) => {
+  console.log(`404 - Route not found: ${req.method} ${req.url}`);
+  res.status(404).json({ 
+    error: 'Not Found',
+    message: `Route ${req.method} ${req.url} not found`,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Conectar y sincronizar la base de datos
-const port = process.env.PORT || 3001;
-
-dbConnection.sync().then(() => {
-  app.listen(port, () => {
-    console.log(`Servidor corriendo en el puerto ${port}`);
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
-}).catch((error) => {
-  console.error('Error al sincronizar la base de datos:', error);
-});
+}
 
+// if (process.env.NODE_ENV !== 'production') {
+// const port = process.env.PORT || 3001;
 
-module.exports=app
+// dbConnection.sync().then(() => {
+//   app.listen(port, () => {
+//     console.log(`Servidor corriendo en el puerto ${port}`);
+//   });
+// }).catch((error) => {
+//   console.error('Error al sincronizar la base de datos:', error);
+// });
+// }
+
+// module.exports=app
