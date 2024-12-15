@@ -15,33 +15,25 @@ require('dotenv').config();
 // Inicializar express
 const app = express();
 
-const allowedOrigins = ['https://equipo1-ecommerce-nuevo.vercel.app'];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
+  origin: 'https://equipo1-ecommerce-nuevo.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true
 }));
 
-// Handle preflight requests
-app.options('*', cors());
 
 app.use(bodyParser.json());
 
-// Debugging middleware
+// Add headers middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} request to ${req.url}`);
-  console.log('Headers:', req.headers);
+  res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   next();
 });
+
 
 // Middleware
 app.use(express.json());
