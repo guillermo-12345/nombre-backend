@@ -49,4 +49,3 @@ Product.associate = (models) => {
 };
 
 module.exports = Product;
-

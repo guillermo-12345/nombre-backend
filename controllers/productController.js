@@ -1,48 +1,87 @@
 const Product = require('../models/Product');
 
 // Obtener todos los productos
+const { Product } = require('../models');  // Assuming you have a Product model
+
 exports.getAllProducts = async (req, res) => {
-  const { category } = req.query;
-
   try {
-    console.log('Fetching products. Category:', category);
-    console.log('Request headers:', req.headers);
+    console.log('getAllProducts: Starting request');
+    const { category, minPrice, maxPrice } = req.query;
     
-    let products;
+    console.log('Query parameters:', { category, minPrice, maxPrice });
 
-    if (category) {
-      products = await Product.findAll({ where: { category } });
-    } else {
-      products = await Product.findAll();
+    let whereClause = {};
+    if (category) whereClause.category = category;
+    if (minPrice || maxPrice) {
+      whereClause.price = {};
+      if (minPrice) whereClause.price[Op.gte] = minPrice;
+      if (maxPrice) whereClause.price[Op.lte] = maxPrice;
     }
 
-    console.log('Products fetched:', products.length);
-    res.status(200).json(products);
+    const products = await Product.findAll({
+      where: whereClause,
+      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img'],
+      raw: true
+    });
+
+    console.log(`Found ${products.length} products`);
+    
+    return res.status(200).json({
+      success: true,
+      count: products.length,
+      data: products
+    });
+
   } catch (error) {
-    console.error('Error fetching products:', error);
-    res.status(500).json({ error: 'Error fetching products', details: error.message });
+    console.error('Error in getAllProducts:', {
+      message: error.message,
+      stack: error.stack
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Error fetching products',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
-
-
-// Obtener un producto por ID
 exports.getProductById = async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const product = await Product.findByPk(id);
+    const { id } = req.params;
+    console.log(`Getting product with ID: ${id}`);
 
+    const product = await Product.findByPk(id, {
+      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img']
+    });
+    
     if (!product) {
-      return res.status(404).json({ error: 'Producto no encontrado' });
+      console.log(`Product with ID ${id} not found`);
+      return res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      });
     }
 
-    res.status(200).json(product);
+    return res.status(200).json({
+      success: true,
+      data: product
+    });
+
   } catch (error) {
-    console.error('Error obteniendo el producto:', error);
-    res.status(500).json({ error: 'Error obteniendo el producto' });
+    console.error('Error in getProductById:', {
+      message: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json({
+      success: false,
+      error: 'Error fetching product',
+      message: error.message
+    });
   }
 };
+
 
 // Crear un producto
 exports.createProduct = async (req, res) => {
