@@ -16,11 +16,12 @@ router.delete('/:id', productController.deleteProduct);
 // Middleware to log requests
 router.use((req, res, next) => {
     console.log(`[Products] ${req.method} ${req.url} at ${new Date().toISOString()}`);
+    console.log('Query:', req.query);
     next();
   });
-
-// Get all products
-router.get('/', async (req, res, next) => {
+  
+  // Get all products
+  router.get('/', async (req, res, next) => {
     try {
       await productController.getAllProducts(req, res);
     } catch (error) {
@@ -37,9 +38,9 @@ router.get('/', async (req, res, next) => {
       next(error);
     }
   });
-
-// Error handling middleware specific to products
-router.use((err, req, res, next) => {
+  
+  // Error handling middleware specific to products
+  router.use((err, req, res, next) => {
     console.error('Products Route Error:', {
       message: err.message,
       stack: err.stack

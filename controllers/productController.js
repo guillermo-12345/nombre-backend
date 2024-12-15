@@ -1,27 +1,37 @@
 const Product = require('../models/Product');
-
-// Obtener todos los productos
-const { Product } = require('../models');  // Assuming you have a Product model
+const { Op } = require('sequelize');
 
 exports.getAllProducts = async (req, res) => {
   try {
     console.log('getAllProducts: Starting request');
-    const { category, minPrice, maxPrice } = req.query;
+    const { category } = req.query;
     
-    console.log('Query parameters:', { category, minPrice, maxPrice });
+    // Log the database connection status
+    const isConnected = await require('../config/db').testConnection();
+    if (!isConnected) {
+      throw new Error('Database connection failed');
+    }
+
+    console.log('Query parameters:', { category });
 
     let whereClause = {};
-    if (category) whereClause.category = category;
-    if (minPrice || maxPrice) {
-      whereClause.price = {};
-      if (minPrice) whereClause.price[Op.gte] = minPrice;
-      if (maxPrice) whereClause.price[Op.lte] = maxPrice;
+    if (category) {
+      whereClause.category = category;
     }
 
     const products = await Product.findAll({
       where: whereClause,
-      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img'],
-      raw: true
+      attributes: [
+        'id', 
+        'title', 
+        'description', 
+        'price', 
+        'purchasePrice',
+        'category',
+        'stock',
+        'img',
+        'supplierId'
+      ]
     });
 
     console.log(`Found ${products.length} products`);
@@ -40,7 +50,7 @@ exports.getAllProducts = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      error: 'Error fetching products',
+      error: 'Error fetching products from database',
       message: error.message,
       timestamp: new Date().toISOString()
     });
@@ -52,12 +62,9 @@ exports.getProductById = async (req, res) => {
     const { id } = req.params;
     console.log(`Getting product with ID: ${id}`);
 
-    const product = await Product.findByPk(id, {
-      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img']
-    });
+    const product = await Product.findByPk(id);
     
     if (!product) {
-      console.log(`Product with ID ${id} not found`);
       return res.status(404).json({
         success: false,
         error: 'Product not found'
@@ -70,10 +77,7 @@ exports.getProductById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in getProductById:', {
-      message: error.message,
-      stack: error.stack
-    });
+    console.error('Error in getProductById:', error);
     return res.status(500).json({
       success: false,
       error: 'Error fetching product',
@@ -81,6 +85,7 @@ exports.getProductById = async (req, res) => {
     });
   }
 };
+
 
 
 // Crear un producto
