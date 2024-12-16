@@ -2,51 +2,73 @@ const Product = require('../models/Product');
 const { Op } = require('sequelize');
 
 exports.getAllProducts = async (req, res) => {
+  console.log('[ProductController] Starting getAllProducts request');
+  
   try {
-    // Test database connection first
+    // Detailed connection test
     const isConnected = await testConnection();
     if (!isConnected) {
-      throw new Error('Database connection failed');
+      console.error('[ProductController] Database connection test failed');
+      return res.status(503).json({
+        success: false,
+        error: 'Database connection unavailable',
+        timestamp: new Date().toISOString()
+      });
     }
 
-    console.log('[Products] Fetching all products');
-    const { category } = req.query;
-    
-    let whereClause = {};
-    if (category) {
-      whereClause.category = category;
-      console.log(`[Products] Filtering by category: ${category}`);
+    // Test raw query first
+    try {
+      await dbConnection.query('SELECT NOW()');
+      console.log('[ProductController] Raw query test successful');
+    } catch (error) {
+      console.error('[ProductController] Raw query test failed:', error);
+      throw new Error('Database query test failed');
     }
 
+    // Verify Product model is properly initialized
+    if (!Product || !Product.findAll) {
+      console.error('[ProductController] Product model is not properly initialized');
+      throw new Error('Product model initialization error');
+    }
+
+    console.log('[ProductController] Attempting to fetch products');
     const products = await Product.findAll({
-      where: whereClause,
       attributes: [
         'id', 
         'title', 
         'description', 
         'price', 
-        'purchasePrice',
         'category',
         'stock',
-        'img',
-        'supplierId'
-      ]
+        'img'
+      ],
+      logging: (sql) => console.log('[ProductController] Executing SQL:', sql)
     });
 
-    console.log(`[Products] Found ${products.length} products`);
+    console.log(`[ProductController] Successfully fetched ${products.length} products`);
     
     return res.status(200).json({
       success: true,
       count: products.length,
-      data: products
+      data: products,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('[Products] Error:', error);
+    console.error('[ProductController] Error in getAllProducts:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      name: error.name
+    });
+
+    // Send a more detailed error response
     return res.status(500).json({
       success: false,
       error: 'Error fetching products from database',
-      details: error.message
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      code: error.code || 'UNKNOWN_ERROR'
     });
   }
 };
