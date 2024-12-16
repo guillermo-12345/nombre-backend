@@ -3,20 +3,19 @@ const { Op } = require('sequelize');
 
 exports.getAllProducts = async (req, res) => {
   try {
-    console.log('getAllProducts: Starting request');
-    const { category } = req.query;
-    
-    // Log the database connection status
-    const isConnected = await require('../config/db').testConnection();
+    // Test database connection first
+    const isConnected = await testConnection();
     if (!isConnected) {
       throw new Error('Database connection failed');
     }
 
-    console.log('Query parameters:', { category });
-
+    console.log('[Products] Fetching all products');
+    const { category } = req.query;
+    
     let whereClause = {};
     if (category) {
       whereClause.category = category;
+      console.log(`[Products] Filtering by category: ${category}`);
     }
 
     const products = await Product.findAll({
@@ -34,7 +33,7 @@ exports.getAllProducts = async (req, res) => {
       ]
     });
 
-    console.log(`Found ${products.length} products`);
+    console.log(`[Products] Found ${products.length} products`);
     
     return res.status(200).json({
       success: true,
@@ -43,19 +42,15 @@ exports.getAllProducts = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in getAllProducts:', {
-      message: error.message,
-      stack: error.stack
-    });
-
+    console.error('[Products] Error:', error);
     return res.status(500).json({
       success: false,
       error: 'Error fetching products from database',
-      message: error.message,
-      timestamp: new Date().toISOString()
+      details: error.message
     });
   }
 };
+
 
 exports.getProductById = async (req, res) => {
   try {

@@ -16,9 +16,9 @@ require('dotenv').config();
 const app = express();
 
 // Logging middleware
+// Logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Headers:', req.headers);
   next();
 });
 
@@ -31,23 +31,20 @@ app.use(cors({
 }));
 
 // Body parser middleware
-app.use(bodyParser.json());
 app.use(express.json());
 
 // Health check endpoint
-app.get('/health', async (req, res) => {
+app.get('/api/health', async (req, res) => {
   try {
-    await dbConnection.authenticate();
+    const isConnected = await require('./config/db').testConnection();
     res.status(200).json({ 
-      status: 'OK',
-      dbStatus: 'Connected',
+      status: isConnected ? 'OK' : 'Error',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.error('[Health] Error:', error);
     res.status(500).json({ 
       status: 'Error',
-      dbStatus: 'Disconnected',
       error: error.message,
       timestamp: new Date().toISOString()
     });
@@ -69,39 +66,38 @@ app.use('/api/email', emailRoutes);
 // Ruta inicial
 app.get('/', (req, res) => res.send('Servidor corriendo...'));
 
-// Middleware de errores generales
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Algo salió mal. Intenta nuevamente.' });
-});
-
-
-// 404 handler
 app.use((req, res) => {
-  console.log(`404 - Route not found: ${req.method} ${req.url}`);
   res.status(404).json({ 
     error: 'Not Found',
-    message: `Route ${req.method} ${req.url} not found`,
-    timestamp: new Date().toISOString()
+    message: `Route ${req.method} ${req.url} not found`
   });
 });
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
-  console.error('Global Error Handler:', err);
+  console.error('[Server] Error:', err);
   res.status(500).json({ 
     error: 'Internal Server Error',
-    message: err.message,
-    timestamp: new Date().toISOString()
+    message: err.message
   });
 });
 
-// Server startup
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
+// Initialize database and start server
+const startServer = async () => {
+  try {
+    await initializeDatabase();
+    if (process.env.NODE_ENV !== 'production') {
+      const PORT = process.env.PORT || 3001;
+      app.listen(PORT, () => {
+        console.log(`[Server] Running on port ${PORT}`);
+      });
+    }
+  } catch (error) {
+    console.error('[Server] Startup error:', error);
+    process.exit(1);
+  }
+};
 
-module.exports=app
+startServer();
+
+module.exports = app;
