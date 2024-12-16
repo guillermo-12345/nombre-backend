@@ -15,10 +15,17 @@ require('dotenv').config();
 // Inicializar express
 const app = express();
 
-// Logging middleware
-// Logging middleware
+// Enhanced logging middleware
 app.use((req, res, next) => {
+  const startTime = Date.now();
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} completed in ${duration}ms with status ${res.statusCode}`);
+  });
+  
   next();
 });
 
@@ -30,26 +37,54 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
-// Body parser middleware
 app.use(express.json());
 
-// Health check endpoint
+// Enhanced health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
-    const isConnected = await require('./config/db').testConnection();
-    res.status(200).json({ 
-      status: isConnected ? 'OK' : 'Error',
-      timestamp: new Date().toISOString()
+    const isConnected = await testConnection();
+    const dbStatus = isConnected ? 'Connected' : 'Disconnected';
+    
+    res.status(200).json({
+      status: isConnected ? 'OK' : 'Degraded',
+      timestamp: new Date().toISOString(),
+      dbStatus,
+      environment: process.env.NODE_ENV,
+      version: process.env.npm_package_version || 'unknown'
     });
   } catch (error) {
-    console.error('[Health] Error:', error);
-    res.status(500).json({ 
+    console.error('[Health] Check failed:', error);
+    res.status(500).json({
       status: 'Error',
+      timestamp: new Date().toISOString(),
       error: error.message,
+      dbStatus: 'Error'
+    });
+  }
+});
+
+// Database status middleware
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health') {
+    return next();
+  }
+
+  try {
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      throw new Error('Database is not connected');
+    }
+    next();
+  } catch (error) {
+    console.error('[Database] Middleware check failed:', error);
+    res.status(503).json({
+      error: 'Service Unavailable',
+      message: 'Database connection is not available',
       timestamp: new Date().toISOString()
     });
   }
 });
+
 
 // Rutas de autenticación
 app.use('/auth', authRoutes);
@@ -66,26 +101,38 @@ app.use('/api/email', emailRoutes);
 // Ruta inicial
 app.get('/', (req, res) => res.send('Servidor corriendo...'));
 
+a
+// 404 handler
 app.use((req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     error: 'Not Found',
-    message: `Route ${req.method} ${req.url} not found`
+    message: `Route ${req.method} ${req.url} not found`,
+    timestamp: new Date().toISOString()
   });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error('[Server] Error:', err);
-  res.status(500).json({ 
+  console.error('[Server] Error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+  
+  res.status(500).json({
     error: 'Internal Server Error',
-    message: err.message
+    message: err.message,
+    timestamp: new Date().toISOString()
   });
 });
 
-// Initialize database and start server
+// Server initialization
 const startServer = async () => {
   try {
+    // Initialize database with retries
     await initializeDatabase();
+    
     if (process.env.NODE_ENV !== 'production') {
       const PORT = process.env.PORT || 3001;
       app.listen(PORT, () => {
@@ -93,11 +140,14 @@ const startServer = async () => {
       });
     }
   } catch (error) {
-    console.error('[Server] Startup error:', error);
+    console.error('[Server] Failed to start:', error);
     process.exit(1);
   }
 };
 
-startServer();
+// Start server if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 module.exports = app;
