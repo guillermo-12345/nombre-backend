@@ -1,7 +1,7 @@
 const { Sequelize, DataTypes } = require('sequelize');
 require('dotenv').config();
 
-// Configuración de conexión a la base de datos
+// Database connection configuration
 const dbConnection = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -9,39 +9,60 @@ const dbConnection = new Sequelize(
   {
     host: process.env.DB_HOST,
     dialect: 'mysql',
-    logging: false,
+    logging: console.log, // Changed to console.log for better debugging
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    }
   }
 );
 
-// Importar modelos
+// Import models
 const Supplier = require('./Supplier');
 const Product = require('./Product');
 const Client = require('./Client');
 const Order = require('./Order');
 const OrderItem = require('./OrderItem');
 
-// Inicializar modelos
-const SupplierModel = Supplier(dbConnection, DataTypes);
-const ProductModel = Product(dbConnection, DataTypes);
-const ClientModel = Client(dbConnection, DataTypes);
-const OrderModel = Order(dbConnection, DataTypes);
-const OrderItemModel = OrderItem(dbConnection, DataTypes);
+// Initialize models
+const models = {
+  SupplierModel: Supplier(dbConnection, DataTypes),
+  ProductModel: Product(dbConnection, DataTypes),
+  ClientModel: Client(dbConnection, DataTypes),
+  OrderModel: Order(dbConnection, DataTypes),
+  OrderItemModel: OrderItem(dbConnection, DataTypes)
+};
 
-// Definir relaciones entre los modelos
-OrderItemModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order' });
-OrderItemModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
-OrderModel.hasMany(OrderItemModel, { foreignKey: 'order_id', as: 'items' });
-ProductModel.hasMany(OrderItemModel, { foreignKey: 'product_id' });
-OrderModel.belongsTo(ClientModel, { foreignKey: 'clientId' });
-ClientModel.hasMany(OrderModel, { foreignKey: 'clientId' });
-ProductModel.belongsTo(SupplierModel, { foreignKey: 'supplierId' });
-SupplierModel.hasMany(ProductModel, { foreignKey: 'supplierId' });
+// Define relationships between models
+Object.values(models).forEach(model => {
+  if (model.associate) {
+    model.associate(models);
+  }
+});
+
+// Test database connection
+const testConnection = async () => {
+  try {
+    await dbConnection.authenticate();
+    console.log('Database connection has been established successfully.');
+    return true;
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+    return false;
+  }
+};
 
 module.exports = {
   dbConnection,
-  SupplierModel,
-  ProductModel,
-  ClientModel,
-  OrderModel,
-  OrderItemModel,
+  testConnection,
+  ...models
 };
+

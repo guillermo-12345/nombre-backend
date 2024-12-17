@@ -1,20 +1,23 @@
 const Product = require('../models/Product');
 const { Op } = require('sequelize');
-
 exports.getAllProducts = async (req, res) => {
   try {
-    console.log('[ProductController] Fetching all products');
+    console.log('[ProductController] Starting getAllProducts');
     
-    const products = await Product.findAll({
-      attributes: [
-        'id', 
-        'title', 
-        'description', 
-        'price', 
-        'category',
-        'stock',
-        'img'
-      ]
+    if (!ProductModel || !ProductModel.findAll) {
+      console.error('[ProductController] Product model not properly initialized');
+      return res.status(500).json({
+        success: false,
+        error: 'Database configuration error',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log('[ProductController] Executing findAll query');
+    
+    const products = await ProductModel.findAll({
+      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img'],
+      raw: true
     });
 
     console.log(`[ProductController] Found ${products.length} products`);
@@ -29,7 +32,8 @@ exports.getAllProducts = async (req, res) => {
     console.error('[ProductController] Error:', {
       message: error.message,
       stack: error.stack,
-      code: error.code
+      code: error.code,
+      name: error.name
     });
 
     return res.status(500).json({

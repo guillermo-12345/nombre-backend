@@ -16,69 +16,62 @@ require('dotenv').config();
 // Inicializar express
 const app = express();
 
-// Logging middleware
+// Enhanced logging middleware
 app.use((req, res, next) => {
+  const start = Date.now();
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Headers:', req.headers);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} completed in ${duration}ms with status ${res.statusCode}`);
+  });
+  
   next();
 });
 
-// CORS middleware - before any routes
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
+// CORS configuration
+app.use(cors({
+  origin: ['https://equipo1-ecommerce-nuevo.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  next();
-});
-
-// Body parser middleware
 app.use(express.json());
 
-// Database connection check middleware
-const checkDatabaseConnection = async (req, res, next) => {
-  try {
-    const isConnected = await testConnection();
-    if (!isConnected) {
-      console.error('[Database] Connection check failed');
-      return res.status(503).json({
-        error: 'Database connection not available',
-        timestamp: new Date().toISOString()
+// Initialize database before setting up routes
+let dbInitialized = false;
+
+app.use(async (req, res, next) => {
+  if (!dbInitialized) {
+    try {
+      const isConnected = await testConnection();
+      if (isConnected) {
+        dbInitialized = true;
+        console.log('[Server] Database initialized successfully');
+      } else {
+        throw new Error('Database connection test failed');
+      }
+    } catch (error) {
+      console.error('[Server] Database initialization failed:', error);
+      return res.status(500).json({
+        error: 'Database initialization failed',
+        message: error.message
       });
     }
-    next();
-  } catch (error) {
-    console.error('[Database] Error:', error);
-    return res.status(503).json({
-      error: 'Database error',
-      message: error.message,
-      timestamp: new Date().toISOString()
-    });
   }
-};
+  next();
+});
 
 // Health check endpoint
-app.get('/api/health', async (req, res) => {
-  try {
-    const isConnected = await testConnection();
-    res.status(200).json({
-      status: isConnected ? 'OK' : 'Error',
-      timestamp: new Date().toISOString(),
-      database: isConnected ? 'Connected' : 'Disconnected'
-    });
-  } catch (error) {
-    console.error('[Health] Check failed:', error);
-    res.status(500).json({
-      status: 'Error',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    dbInitialized
+  });
 });
 
 // Rutas de autenticación
@@ -96,7 +89,7 @@ app.use('/api/email', emailRoutes);
 // Ruta inicial
 app.get('/', (req, res) => res.send('Servidor corriendo...'));
 
-// Error handling middleware
+// Global error handler
 app.use((err, req, res, next) => {
   console.error('[Server] Error:', {
     message: err.message,
@@ -113,3 +106,4 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
+

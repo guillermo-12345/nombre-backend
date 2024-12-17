@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
-const { dbConnection } = require('../config/db');
 
-const Product = dbConnection.define('Product', {
+module.exports = (sequelize) => {
+  const Product = sequelize.define('Product', {
   title: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -47,5 +47,5 @@ const Product = dbConnection.define('Product', {
 Product.associate = (models) => {
   Product.hasMany(models.OrderItem, { foreignKey: 'productId', as: 'orderItems' });
 };
-
-module.exports = Product;
+return Product
+}
