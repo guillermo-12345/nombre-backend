@@ -1,4 +1,4 @@
-const express = require('express');
+/* const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const orderRoutes = require('./routes/orderRoutes');
@@ -82,3 +82,113 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
+ */
+
+const express = require('express');
+const cors = require('cors');
+const mysql = require('mysql2/promise');
+require('dotenv').config();
+
+const app = express();
+
+// Detailed logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  next();
+});
+
+// CORS configuration
+app.use(cors({
+  origin: ['https://equipo1-ecommerce-nuevo.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', DELETE, 'OPTIONS'],
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Create database pool
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
+// Health check endpoint with detailed diagnostics
+app.get('/api/health', async (req, res) => {
+  try {
+    // Test database connection
+    const connection = await pool.getConnection();
+    await connection.ping();
+    connection.release();
+
+    res.json({
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      database: 'Connected',
+      environment: process.env.NODE_ENV,
+      cors: {
+        origin: 'https://equipo1-ecommerce-nuevo.vercel.app',
+        enabled: true
+      }
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(500).json({
+      status: 'Error',
+      timestamp: new Date().toISOString(),
+      error: {
+        message: error.message,
+        code: error.code
+      }
+    });
+  }
+});
+
+// Products endpoint with error handling
+app.get('/api/products', async (req, res) => {
+  try {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [products] = await connection.query('SELECT * FROM products');
+      res.json({
+        status: 'success',
+        data: products
+      });
+    } catch (error) {
+      console.error('Query error:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Database query failed',
+        error: error.message
+      });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Connection error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    status: 'error',
+    message: 'Internal server error',
+    error: err.message
+  });
+});
+
+module.exports = app;
+
