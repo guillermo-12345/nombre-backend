@@ -2,7 +2,8 @@ const { Product } = require('../models');
 
 exports.getAllProducts = async (req, res) => {
   try {
-    console.log('[ProductController] Fetching products');
+    console.log('[ProductController] Fetching all products');
+    
     const products = await Product.findAll({
       attributes: [
         'id', 
@@ -15,12 +16,26 @@ exports.getAllProducts = async (req, res) => {
       ]
     });
 
-    return res.status(200).json(products);
+    console.log(`[ProductController] Found ${products.length} products`);
+    
+    return res.status(200).json({
+      success: true,
+      data: products,
+      timestamp: new Date().toISOString()
+    });
+
   } catch (error) {
-    console.error('[ProductController] Error:', error);
+    console.error('[ProductController] Error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
+
     return res.status(500).json({
-      error: 'Error fetching products',
-      message: error.message
+      success: false,
+      error: 'Failed to fetch products',
+      message: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 };
