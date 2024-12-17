@@ -16,30 +16,36 @@ require('dotenv').config();
 // Inicializar express
 const app = express();
 
-// Enhanced logging middleware
+
+// Logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   console.log('Headers:', req.headers);
   next();
 });
 
-// CORS configuration - More permissive for troubleshooting
-app.use(cors());
+// CORS configuration
+const allowedOrigins = ['https://equipo1-ecommerce-nuevo.vercel.app'];
 
-// Add headers middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle OPTIONS method
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
-  next();
-});
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(null, false);
+    }
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
+
+// Pre-flight requests
+app.options('*', cors());
+
+app.use(express.json());
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -57,6 +63,26 @@ app.get('/api/health', async (req, res) => {
       status: 'Error',
       timestamp: new Date().toISOString(),
       error: error.message
+    });
+  }
+});
+
+// Database connection check middleware
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health') return next();
+
+  try {
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      throw new Error('Database connection not available');
+    }
+    next();
+  } catch (error) {
+    console.error('[Database] Connection check failed:', error);
+    res.status(503).json({
+      error: 'Service Unavailable',
+      message: 'Database connection is not available',
+      timestamp: new Date().toISOString()
     });
   }
 });
