@@ -16,62 +16,44 @@ require('dotenv').config();
 // Inicializar express
 const app = express();
 
-// Enhanced logging middleware
+// Detailed logging middleware
 app.use((req, res, next) => {
-  const start = Date.now();
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
-  
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} completed in ${duration}ms with status ${res.statusCode}`);
-  });
-  
+  console.log('Headers:', req.headers);
   next();
 });
 
-// CORS configuration
-app.use(cors({
-  origin: ['https://equipo1-ecommerce-nuevo.vercel.app'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
+// Simplified CORS configuration
+app.use(cors());
 
+// Body parser middleware
 app.use(express.json());
 
-// Initialize database before setting up routes
-let dbInitialized = false;
-
-app.use(async (req, res, next) => {
-  if (!dbInitialized) {
-    try {
-      const isConnected = await testConnection();
-      if (isConnected) {
-        dbInitialized = true;
-        console.log('[Server] Database initialized successfully');
-      } else {
-        throw new Error('Database connection test failed');
-      }
-    } catch (error) {
-      console.error('[Server] Database initialization failed:', error);
-      return res.status(500).json({
-        error: 'Database initialization failed',
-        message: error.message
-      });
-    }
-  }
-  next();
+// Basic health check that doesn't depend on DB
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    dbInitialized
-  });
+// Database health check
+app.get('/api/db-health', async (req, res) => {
+  try {
+    await dbConnection.authenticate();
+    res.json({
+      status: 'OK',
+      message: 'Database connection successful',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).json({
+      status: 'Error',
+      message: 'Database connection failed',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Rutas de autenticación
@@ -89,21 +71,14 @@ app.use('/api/email', emailRoutes);
 // Ruta inicial
 app.get('/', (req, res) => res.send('Servidor corriendo...'));
 
-// Global error handler
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('[Server] Error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method
-  });
-
+  console.error('Error:', err);
   res.status(500).json({
-    error: 'Internal Server Error',
-    message: err.message,
+    status: 'Error',
+    message: err.message || 'Internal server error',
     timestamp: new Date().toISOString()
   });
 });
 
 module.exports = app;
-
