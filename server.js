@@ -23,50 +23,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS configuration
-app.use(cors({
-  origin: ['https://equipo1-ecommerce-nuevo.vercel.app'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
-
-// Pre-flight requests
-app.options('*', cors());
-
-// Body parser middleware
-app.use(express.json());
+// CORS configuration - More permissive for troubleshooting
+app.use(cors());
 
 // Add headers middleware
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Headers', '*');
   res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle OPTIONS method
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
   next();
-});
-
-// Database connection check middleware
-app.use(async (req, res, next) => {
-  if (req.path === '/api/health') {
-    return next();
-  }
-
-  try {
-    const isConnected = await testConnection();
-    if (!isConnected) {
-      throw new Error('Database connection not available');
-    }
-    next();
-  } catch (error) {
-    console.error('[Database] Connection check failed:', error);
-    res.status(503).json({
-      error: 'Service Unavailable',
-      message: 'Database connection is not available',
-      timestamp: new Date().toISOString()
-    });
-  }
 });
 
 // Health check endpoint
@@ -128,26 +100,5 @@ app.use((err, req, res, next) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// Server initialization
-const startServer = async () => {
-  try {
-    await initializeDatabase();
-    
-    if (process.env.NODE_ENV !== 'production') {
-      const PORT = process.env.PORT || 3001;
-      app.listen(PORT, () => {
-        console.log(`[Server] Running on port ${PORT}`);
-      });
-    }
-  } catch (error) {
-    console.error('[Server] Failed to start:', error);
-    process.exit(1);
-  }
-};
-
-if (process.env.NODE_ENV !== 'test') {
-  startServer();
-}
 
 module.exports = app;
