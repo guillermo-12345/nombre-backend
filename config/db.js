@@ -1,55 +1,35 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-// Validate DATABASE_URL
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not defined');
 }
 
-// Parse DATABASE_URL to validate format
-try {
-  const url = new URL(process.env.DATABASE_URL);
-  console.log('[Database] Validated database URL format');
-} catch (error) {
-  console.error('[Database] Invalid DATABASE_URL format:', error.message);
-  throw error;
-}
-
 const dbConnection = new Sequelize(process.env.DATABASE_URL, {
-  dialect: 'postgres',
+  dialect: 'mysql',
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    },
-    connectTimeout: 60000 // Increase connection timeout
+    connectTimeout: 60000,
+    // SSL is disabled as per your Google Cloud SQL configuration
+    ssl: null
   },
   logging: (msg) => console.log(`[Database] ${msg}`),
   pool: {
     max: 5,
     min: 0,
-    acquire: 60000, // Increase acquire timeout
+    acquire: 60000,
     idle: 10000
-  },
-  retry: {
-    max: 3, // Maximum number of connection retries
-    timeout: 60000 // Retry timeout
   }
 });
 
 const testConnection = async () => {
   try {
-    // Basic connection test
+    console.log('[Database] Testing connection with following config:');
+    console.log('[Database] Host:', dbConnection.config.host);
+    console.log('[Database] Port:', dbConnection.config.port);
+    console.log('[Database] Database:', dbConnection.config.database);
+    
     await dbConnection.authenticate();
     console.log('[Database] Authentication successful');
-
-    // Test query execution
-    const [results] = await dbConnection.query('SELECT NOW()');
-    console.log('[Database] Query test successful:', results);
-
-    // Test model synchronization
-    await dbConnection.sync({ force: false });
-    console.log('[Database] Model synchronization successful');
 
     return true;
   } catch (error) {
@@ -63,7 +43,6 @@ const testConnection = async () => {
   }
 };
 
-// Initialize database with retries
 const initializeDatabase = async (retries = 5) => {
   for (let i = 0; i < retries; i++) {
     try {
