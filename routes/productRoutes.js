@@ -9,7 +9,15 @@ router.use((req, res, next) => {
 });
 
 // Get all products
-router.get('/', productController.getAllProducts);
+router.get('/', async (req, res, next) => {
+  try {
+    console.log('[ProductRoutes] Attempting to fetch all products');
+    await productController.getAllProducts(req, res);
+  } catch (error) {
+    console.error('[ProductRoutes] Error in GET /:', error);
+    next(error);
+  }
+});
 
 // Get products by category and supplier
 router.get('/by-category-and-supplier', productController.getProductsByCategoryAndSupplier);

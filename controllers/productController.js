@@ -17,10 +17,12 @@ exports.getAllProducts = async (req, res) => {
     });
   } catch (error) {
     console.error('[ProductController] Error in getAllProducts:', error);
+    
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch products',
-      message: error.message
+      message: error.message,
+      stack: process.env.NODE_ENV === 'production' ? '🥞' : error.stack
     });
   }
 };
