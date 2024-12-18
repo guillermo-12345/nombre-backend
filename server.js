@@ -86,68 +86,81 @@ module.exports = app;
 
 const express = require('express');
 const cors = require('cors');
+const { ProductModel } = require('./models');
 require('dotenv').config();
 
 const app = express();
 
-// Basic request logging
+// Enhanced logging
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
   next();
 });
 
-// CORS - before any routes
+// CORS configuration - must be before routes
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-  
+
   next();
 });
 
-// Basic health check - no DB
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+// Parse JSON bodies
+app.use(express.json());
 
-// Test endpoint
-app.get('/api/test', (req, res) => {
-  res.json({ 
-    message: 'Test endpoint working',
-    headers: req.headers,
-    origin: req.get('origin')
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString()
   });
 });
 
-// Products endpoint with error handling
+// Products endpoint with proper error handling
 app.get('/api/products', async (req, res) => {
   try {
-    // For testing, return mock data
-    res.json({
-      status: 'success',
-      data: [
-        { id: 1, name: 'Test Product', price: 99.99 }
-      ]
+    console.log('[Products] Attempting to fetch products');
+    
+    const products = await ProductModel.findAll({
+      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img']
+    });
+
+    console.log(`[Products] Successfully fetched ${products.length} products`);
+    
+    return res.json({
+      success: true,
+      data: products
     });
   } catch (error) {
-    console.error('Products error:', error);
-    res.status(500).json({
-      status: 'error',
+    console.error('[Products] Error fetching products:', {
+      message: error.message,
+      stack: error.stack
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch products',
       message: error.message
     });
   }
 });
 
-// Error handling
+// Global error handler
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
+  console.error('[Server] Unhandled error:', err);
   res.status(500).json({
-    status: 'error',
-    message: 'Internal server error'
+    success: false,
+    error: 'Internal server error',
+    message: err.message
   });
 });
 
