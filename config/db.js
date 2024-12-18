@@ -34,8 +34,7 @@ const testConnection = async () => {
     console.error('[Database] Connection test failed:', {
       message: error.message,
       code: error.code,
-      name: error.name,
-      stack: error.stack
+      name: error.name
     });
     return false;
   }

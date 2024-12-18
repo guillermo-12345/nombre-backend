@@ -2,13 +2,28 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
 
-router.get('/', async (req, res, next) => {
+router.get('/', async (req, res) => {
   try {
-    console.log('[ProductRoutes] Attempting to fetch all products');
-    await productController.getAllProducts(req, res);
+    console.log('[ProductRoute] Attempting to fetch products');
+    
+    const products = await ProductModel.findAll({
+      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img']
+    });
+
+    console.log(`[ProductRoute] Successfully fetched ${products.length} products`);
+    
+    return res.json({
+      success: true,
+      data: products
+    });
   } catch (error) {
-    console.error('[ProductRoutes] Error in GET /:', error);
-    next(error);
+    console.error('[ProductRoute] Error fetching products:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch products',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+    });
   }
 });
 

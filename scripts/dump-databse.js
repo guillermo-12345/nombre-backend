@@ -4,9 +4,9 @@ const path = require('path');
 // Update these with your local database details
 const DB_NAME = 'equipo1_ecommerce';
 const DB_USER = 'root';
-const DB_PASS = 'pass';
-const DB_HOST = '127.0.0.1';
-const DB_PORT = '3001';
+const DB_PASSWORD = 'pass';
+const DB_HOST = '34.39.135.236';
+const DB_PORT = '3306';
 
 const dumpFile = path.join(__dirname, 'database-dump.sql');
 
