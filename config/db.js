@@ -34,14 +34,28 @@ const testConnection = async () => {
     console.error('[Database] Connection test failed:', {
       message: error.message,
       code: error.code,
-      name: error.name
+      name: error.name,
+      stack: error.stack
     });
+    return false;
+  }
+};
+
+const initializeDatabase = async () => {
+  try {
+    await testConnection();
+    await dbConnection.sync({ alter: true });
+    console.log('[Database] Models synchronized');
+    return true;
+  } catch (error) {
+    console.error('[Database] Initialization failed:', error);
     return false;
   }
 };
 
 module.exports = {
   dbConnection,
-  testConnection
+  testConnection,
+  initializeDatabase
 };
 

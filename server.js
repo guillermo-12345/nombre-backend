@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { testConnection } = require('./config/db');
+const { initializeDatabase } = require('./config/db');
 require('dotenv').config();
 
 const app = express();
@@ -15,11 +15,10 @@ app.use((req, res, next) => {
 
 // CORS configuration
 const corsOptions = {
-  origin: 'https://equipo1-ecommerce-nuevo.vercel.app',
+  origin: ['https://equipo1-ecommerce-nuevo.vercel.app', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
@@ -40,27 +39,29 @@ const protectedRoutes = require('./routes/protectedRoutes');
 const purchasesRoutes = require('./routes/purchasesRoutes');
 const supplierRoutes = require('./routes/supplierRoutes');
 
-// Database connection check middleware
-const checkDbConnection = async (req, res, next) => {
-  try {
-    const isConnected = await testConnection();
-    if (!isConnected) {
-      console.error('[Database] Connection check failed');
-      return res.status(503).json({
-        error: 'Database connection not available',
-        timestamp: new Date().toISOString()
+// Database initialization middleware
+const initDb = async (req, res, next) => {
+  if (!app.locals.dbInitialized) {
+    try {
+      const isInitialized = await initializeDatabase();
+      if (!isInitialized) {
+        throw new Error('Database initialization failed');
+      }
+      app.locals.dbInitialized = true;
+    } catch (error) {
+      console.error('[Server] Database initialization error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Database initialization failed',
+        message: error.message
       });
     }
-    console.log('[Database] Connection check passed');
-    next();
-  } catch (error) {
-    console.error('[Database] Error during connection check:', error);
-    return res.status(503).json({
-      error: 'Database error',
-      message: error.message
-    });
   }
+  next();
 };
+
+// Apply database initialization middleware to all routes
+app.use(initDb);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -70,20 +71,21 @@ app.get('/api/health', (req, res) => {
     env: {
       NODE_ENV: process.env.NODE_ENV,
       DATABASE_URL: process.env.DATABASE_URL ? 'Set' : 'Not set'
-    }
+    },
+    dbInitialized: app.locals.dbInitialized
   });
 });
 
-// Apply routes with database check
-app.use('/api/auth', checkDbConnection, authRoutes);
-app.use('/api/clients', checkDbConnection, clientRoutes);
-app.use('/api/email', checkDbConnection, emailRoutes);
-app.use('/api/orders', checkDbConnection, orderRoutes);
-app.use('/api/products', checkDbConnection, productRoutes);
-app.use('/api/profile', checkDbConnection, profileRoutes);
-app.use('/api/protected', checkDbConnection, protectedRoutes);
-app.use('/api/purchases', checkDbConnection, purchasesRoutes);
-app.use('/api/suppliers', checkDbConnection, supplierRoutes);
+// Apply routes
+app.use('/api/auth', authRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/protected', protectedRoutes);
+app.use('/api/purchases', purchasesRoutes);
+app.use('/api/suppliers', supplierRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
