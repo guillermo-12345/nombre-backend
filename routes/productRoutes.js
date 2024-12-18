@@ -2,13 +2,6 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
 
-// Logging middleware for product routes
-router.use((req, res, next) => {
-  console.log(`[ProductRoutes] ${req.method} ${req.url} at ${new Date().toISOString()}`);
-  next();
-});
-
-// Get all products
 router.get('/', async (req, res, next) => {
   try {
     console.log('[ProductRoutes] Attempting to fetch all products');
