@@ -5,10 +5,9 @@ require('dotenv').config();
 
 const app = express();
 
-// Logging middleware
+// Enhanced logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Origin:', req.get('origin'));
   next();
 });
 
@@ -19,7 +18,7 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    return callback(new Error('Not allowed by CORS'));
+    return callback(new Error('CORS policy violation'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -45,20 +44,22 @@ const initDb = async (req, res, next) => {
 };
 app.use(initDb);
 
+// Health check endpoint (ensure it exists)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    dbInitialized: app.locals.dbInitialized
+  });
+});
+
 // Routes
 const routes = [
   { path: '/api/auth', route: require('./routes/authRoute') },
   { path: '/api/clients', route: require('./routes/clientRoutes') },
   { path: '/api/products', route: require('./routes/productRoutes') }
-  // Agrega el resto de rutas
 ];
-
 routes.forEach(r => app.use(r.path, r.route));
-
-// Health endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
 
 // Error handler
 app.use((err, req, res, next) => {
@@ -66,9 +67,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
-// 404 handler
+// Catch-all for invalid routes
 app.use('*', (req, res) => {
-  res.status(404).json({ success: false, message: `Cannot ${req.method} ${req.originalUrl}` });
+  res.status(404).json({
+    success: false,
+    message: `Cannot ${req.method} ${req.originalUrl}`
+  });
 });
 
 module.exports = app;
