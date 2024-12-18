@@ -86,107 +86,68 @@ module.exports = app;
 
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const app = express();
 
-// Detailed logging middleware
+// Basic request logging
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Headers:', req.headers);
   next();
 });
 
-// CORS configuration
-app.use(cors({
-  origin: ['https://equipo1-ecommerce-nuevo.vercel.app'],
-  methods: ['GET', 'POST', 'PUT', DELETE, 'OPTIONS'],
-  credentials: true
-}));
-
-app.use(express.json());
-
-// Create database pool
-const pool = mysql.createPool({
-  uri: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  },
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+// CORS - before any routes
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
 });
 
-// Health check endpoint with detailed diagnostics
-app.get('/api/health', async (req, res) => {
-  try {
-    // Test database connection
-    const connection = await pool.getConnection();
-    await connection.ping();
-    connection.release();
+// Basic health check - no DB
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 
-    res.json({
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      database: 'Connected',
-      environment: process.env.NODE_ENV,
-      cors: {
-        origin: 'https://equipo1-ecommerce-nuevo.vercel.app',
-        enabled: true
-      }
-    });
-  } catch (error) {
-    console.error('Health check failed:', error);
-    res.status(500).json({
-      status: 'Error',
-      timestamp: new Date().toISOString(),
-      error: {
-        message: error.message,
-        code: error.code
-      }
-    });
-  }
+// Test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Test endpoint working',
+    headers: req.headers,
+    origin: req.get('origin')
+  });
 });
 
 // Products endpoint with error handling
 app.get('/api/products', async (req, res) => {
   try {
-    const connection = await pool.getConnection();
-    
-    try {
-      const [products] = await connection.query('SELECT * FROM products');
-      res.json({
-        status: 'success',
-        data: products
-      });
-    } catch (error) {
-      console.error('Query error:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Database query failed',
-        error: error.message
-      });
-    } finally {
-      connection.release();
-    }
+    // For testing, return mock data
+    res.json({
+      status: 'success',
+      data: [
+        { id: 1, name: 'Test Product', price: 99.99 }
+      ]
+    });
   } catch (error) {
-    console.error('Connection error:', error);
+    console.error('Products error:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Database connection failed',
-      error: error.message
+      message: error.message
     });
   }
 });
 
-// Global error handler
+// Error handling
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  console.error('Server error:', err);
   res.status(500).json({
     status: 'error',
-    message: 'Internal server error',
-    error: err.message
+    message: 'Internal server error'
   });
 });
 
