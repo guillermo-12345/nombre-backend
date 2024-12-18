@@ -1,68 +1,58 @@
-const { Sequelize, DataTypes } = require('sequelize');
+const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-// Database connection configuration
-const dbConnection = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASS,
-  {
-    host: process.env.DB_HOST,
-    dialect: 'mysql',
-    logging: console.log, // Changed to console.log for better debugging
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not defined');
+}
+
+const dbConnection = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'mysql',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
     },
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    }
-  }
-);
+    connectTimeout: 60000
+  },
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 60000,
+    idle: 10000
+  },
+  logging: (msg) => console.log(`[Database] ${msg}`)
+});
 
 // Import models
-const Supplier = require('./Supplier');
 const Product = require('./Product');
+const Supplier = require('./Supplier');
 const Client = require('./Client');
 const Order = require('./Order');
 const OrderItem = require('./OrderItem');
 
 // Initialize models
-const models = {
-  SupplierModel: Supplier(dbConnection, DataTypes),
-  ProductModel: Product(dbConnection, DataTypes),
-  ClientModel: Client(dbConnection, DataTypes),
-  OrderModel: Order(dbConnection, DataTypes),
-  OrderItemModel: OrderItem(dbConnection, DataTypes)
-};
+const ProductModel = Product(dbConnection, Sequelize.DataTypes);
+const SupplierModel = Supplier(dbConnection, Sequelize.DataTypes);
+const ClientModel = Client(dbConnection, Sequelize.DataTypes);
+const OrderModel = Order(dbConnection, Sequelize.DataTypes);
+const OrderItemModel = OrderItem(dbConnection, Sequelize.DataTypes);
 
-// Define relationships between models
-Object.values(models).forEach(model => {
-  if (model.associate) {
-    model.associate(models);
-  }
-});
-
-// Test database connection
-const testConnection = async () => {
-  try {
-    await dbConnection.authenticate();
-    console.log('Database connection has been established successfully.');
-    return true;
-  } catch (error) {
-    console.error('Unable to connect to the database:', error);
-    return false;
-  }
-};
+// Define relationships
+OrderItemModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order' });
+OrderItemModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
+OrderModel.hasMany(OrderItemModel, { foreignKey: 'order_id', as: 'items' });
+ProductModel.hasMany(OrderItemModel, { foreignKey: 'product_id' });
+OrderModel.belongsTo(ClientModel, { foreignKey: 'clientId' });
+ClientModel.hasMany(OrderModel, { foreignKey: 'clientId' });
+ProductModel.belongsTo(SupplierModel, { foreignKey: 'supplierId' });
+SupplierModel.hasMany(ProductModel, { foreignKey: 'supplierId' });
 
 module.exports = {
   dbConnection,
-  testConnection,
-  ...models
+  ProductModel,
+  SupplierModel,
+  ClientModel,
+  OrderModel,
+  OrderItemModel
 };
 
