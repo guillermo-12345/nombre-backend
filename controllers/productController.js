@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const { Op } = require('sequelize');
-const getAllProducts = async (req, res) => {
+
+exports.getAllProducts = async (req, res) => {
   try {
     console.log('[ProductController] Starting getAllProducts request');
     
@@ -15,12 +16,7 @@ const getAllProducts = async (req, res) => {
       data: products
     });
   } catch (error) {
-    console.error('[ProductController] Error:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
-    
+    console.error('[ProductController] Error in getAllProducts:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch products',
@@ -29,15 +25,10 @@ const getAllProducts = async (req, res) => {
   }
 };
 
-module.exports = {
-  getAllProducts
-};
-
-
 exports.getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`Getting product with ID: ${id}`);
+    console.log(`[ProductController] Getting product with ID: ${id}`);
 
     const product = await Product.findByPk(id);
     
@@ -52,9 +43,8 @@ exports.getProductById = async (req, res) => {
       success: true,
       data: product
     });
-
   } catch (error) {
-    console.error('Error in getProductById:', error);
+    console.error('[ProductController] Error in getProductById:', error);
     return res.status(500).json({
       success: false,
       error: 'Error fetching product',
@@ -63,58 +53,86 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-
-
-// Crear un producto
 exports.createProduct = async (req, res) => {
   try {
+    console.log('[ProductController] Creating new product');
     const product = await Product.create(req.body);
-    res.status(201).json(product);
+    console.log(`[ProductController] Product created with ID: ${product.id}`);
+    res.status(201).json({
+      success: true,
+      data: product
+    });
   } catch (error) {
-    console.error('Error al crear el producto:', error);
-    res.status(500).json({ error: 'Error al crear el producto' });
+    console.error('[ProductController] Error in createProduct:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error creating product',
+      message: error.message
+    });
   }
 };
 
-
-// Actualizar un producto
 exports.updateProduct = async (req, res) => {
   try {
-    const product = await Product.findByPk(req.params.id);
+    const { id } = req.params;
+    console.log(`[ProductController] Updating product with ID: ${id}`);
+    const product = await Product.findByPk(id);
     if (product) {
       await product.update(req.body);
-      res.json(product);
+      console.log(`[ProductController] Product updated: ${id}`);
+      res.json({
+        success: true,
+        data: product
+      });
     } else {
-      res.status(404).json({ error: 'Producto no encontrado' });
+      res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      });
     }
   } catch (error) {
-    console.error('Error al actualizar el producto:', error);
-    res.status(500).json({ error: 'Error al actualizar el producto' });
+    console.error('[ProductController] Error in updateProduct:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error updating product',
+      message: error.message
+    });
   }
 };
 
-// Eliminar un producto
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByPk(req.params.id);
+    const { id } = req.params;
+    console.log(`[ProductController] Deleting product with ID: ${id}`);
+    const product = await Product.findByPk(id);
     if (product) {
       await product.destroy();
-      res.json({ message: 'Producto eliminado' });
+      console.log(`[ProductController] Product deleted: ${id}`);
+      res.json({
+        success: true,
+        message: 'Product deleted'
+      });
     } else {
-      res.status(404).json({ error: 'Producto no encontrado' });
+      res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      });
     }
   } catch (error) {
-    console.error('Error al eliminar el producto:', error);
-    res.status(500).json({ error: 'Error al eliminar el producto' });
+    console.error('[ProductController] Error in deleteProduct:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error deleting product',
+      message: error.message
+    });
   }
 };
 
-// Obtener productos por categoría y proveedor
 exports.getProductsByCategoryAndSupplier = async (req, res) => {
   const { category, supplierId } = req.query;
+  console.log(`[ProductController] Fetching products by category: ${category} and supplier: ${supplierId}`);
 
   try {
-    // Buscar productos que coincidan con la categoría y el proveedor
     const products = await Product.findAll({
       where: {
         category: category,
@@ -122,22 +140,39 @@ exports.getProductsByCategoryAndSupplier = async (req, res) => {
       }
     });
 
-    res.status(200).json(products);
+    console.log(`[ProductController] Found ${products.length} products`);
+    res.status(200).json({
+      success: true,
+      data: products
+    });
   } catch (error) {
-    console.error('Error al obtener productos:', error);
-    res.status(500).json({ error: 'Error al obtener productos' });
+    console.error('[ProductController] Error in getProductsByCategoryAndSupplier:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching products by category and supplier',
+      message: error.message
+    });
   }
 };
 
-
 exports.getProductsByCategory = async (req, res) => {
   const { category } = req.query;
+  console.log(`[ProductController] Fetching products by category: ${category}`);
+
   try {
     const products = await Product.findAll({ where: { category } });
-    res.status(200).json(products);
+    console.log(`[ProductController] Found ${products.length} products in category ${category}`);
+    res.status(200).json({
+      success: true,
+      data: products
+    });
   } catch (error) {
-    console.error('Error fetching products by category:', error);
-    res.status(500).json({ error: 'Error al obtener productos por categoría' });
+    console.error('[ProductController] Error in getProductsByCategory:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching products by category',
+      message: error.message
+    });
   }
 };
 

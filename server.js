@@ -24,7 +24,7 @@ app.use((req, res, next) => {
 
 // CORS configuration
 app.use(cors({
-  origin: 'https://equipo1-ecommerce-nuevo.vercel.app',
+  origin: ['https://equipo1-ecommerce-nuevo.vercel.app', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -83,6 +83,19 @@ app.use('/api/profile', checkDbConnection, profileRoutes);
 app.use('/api/protected', checkDbConnection, protectedRoutes);
 app.use('/api/purchases', checkDbConnection, purchasesRoutes);
 app.use('/api/suppliers', checkDbConnection, supplierRoutes);
+
+// Apply CORS to all routes
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', true);
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 
 // Catch-all route for undefined routes
 app.use('*', (req, res) => {
