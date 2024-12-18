@@ -1,52 +1,32 @@
 const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
-
 const app = express();
 
-// CORS middleware (aplicado globalmente)
+// Forzar CORS de forma global
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   next();
 });
 
-// Logging middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Rutas de ejemplo
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Health check passed' });
-});
-
-// Ruta principal de productos
+// Ruta de prueba
 app.get('/api/products', (req, res) => {
-  res.status(200).json({
-    success: true,
-    products: [
-      { id: 1, name: 'Producto 1', price: 100 },
-      { id: 2, name: 'Producto 2', price: 200 }
-    ]
-  });
+  res.json({ success: true, products: [{ id: 1, name: 'Producto de prueba', price: 100 }] });
 });
 
-// Error handler
+// Manejo de errores
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
+  console.error(err.message);
   res.status(500).json({ success: false, error: err.message });
 });
 
-// Exportar servidor
+// Ruta no encontrada
+app.use('*', (req, res) => {
+  res.status(404).json({ success: false, message: 'Ruta no encontrada' });
+});
+
 module.exports = app;
