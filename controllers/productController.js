@@ -1,49 +1,38 @@
 const Product = require('../models/Product');
 const { Op } = require('sequelize');
-exports.getAllProducts = async (req, res) => {
+const getAllProducts = async (req, res) => {
   try {
-    console.log('[ProductController] Starting getAllProducts');
+    console.log('[ProductController] Starting getAllProducts request');
     
-    if (!ProductModel || !ProductModel.findAll) {
-      console.error('[ProductController] Product model not properly initialized');
-      return res.status(500).json({
-        success: false,
-        error: 'Database configuration error',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    console.log('[ProductController] Executing findAll query');
-    
-    const products = await ProductModel.findAll({
-      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img'],
-      raw: true
+    const products = await Product.findAll({
+      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img']
     });
 
     console.log(`[ProductController] Found ${products.length} products`);
     
     return res.status(200).json({
       success: true,
-      data: products,
-      timestamp: new Date().toISOString()
+      data: products
     });
-
   } catch (error) {
     console.error('[ProductController] Error:', {
       message: error.message,
-      stack: error.stack,
       code: error.code,
-      name: error.name
+      stack: error.stack
     });
-
+    
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch products',
-      message: error.message,
-      timestamp: new Date().toISOString()
+      message: error.message
     });
   }
 };
+
+module.exports = {
+  getAllProducts
+};
+
 
 exports.getProductById = async (req, res) => {
   try {

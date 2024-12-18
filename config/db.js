@@ -40,25 +40,8 @@ const testConnection = async () => {
   }
 };
 
-const initializeDatabase = async () => {
-  try {
-    const isConnected = await testConnection();
-    if (!isConnected) {
-      throw new Error('Failed to connect to database');
-    }
-
-    await dbConnection.sync({ force: false });
-    console.log('[Database] Models synchronized');
-    return true;
-  } catch (error) {
-    console.error('[Database] Initialization failed:', error);
-    throw error;
-  }
-};
-
 module.exports = {
   dbConnection,
-  testConnection,
-  initializeDatabase
+  testConnection
 };
 
