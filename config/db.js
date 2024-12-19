@@ -9,6 +9,7 @@ console.log('[Database] Initializing connection...');
 
 const dbConnection = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'mysql',
+  dialectModule:require('mysql2'),
   dialectOptions: {
     ssl: {
       require: true,
@@ -57,4 +58,3 @@ module.exports = {
   testConnection,
   initializeDatabase
 };
-
