@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { testConnection, initializeDatabase } = require('./config/db');
+const { testConnection } = require('./config/db');
 const productRoutes = require('./routes/productRoutes');
 require('dotenv').config();
 
@@ -29,29 +29,25 @@ app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
-// Database initialization middleware
-const initDb = async (req, res, next) => {
-  if (!app.locals.dbInitialized) {
-    try {
-      const isInitialized = await initializeDatabase();
-      if (!isInitialized) {
-        throw new Error('Database initialization failed');
-      }
-      app.locals.dbInitialized = true;
-    } catch (error) {
-      console.error('[Server] Database initialization error:', error);
+// Database connection check middleware
+const checkDbConnection = async (req, res, next) => {
+  try {
+    const isConnected = await testConnection();
+    if (!isConnected) {
       return res.status(503).json({
-        success: false,
-        error: 'Database initialization failed',
-        message: error.message
+        error: 'Database connection not available',
+        timestamp: new Date().toISOString()
       });
     }
+    next();
+  } catch (error) {
+    console.error('[Database] Error:', error);
+    return res.status(503).json({
+      error: 'Database error',
+      message: error.message
+    });
   }
-  next();
 };
-
-// Apply database initialization middleware to all routes
-app.use(initDb);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -61,13 +57,12 @@ app.get('/api/health', (req, res) => {
     env: {
       NODE_ENV: process.env.NODE_ENV,
       DATABASE_URL: process.env.DATABASE_URL ? 'Set' : 'Not set'
-    },
-    dbInitialized: app.locals.dbInitialized
+    }
   });
 });
 
-// Apply routes
-app.use('/api/products', productRoutes);
+// Apply routes with database check
+app.use('/api/products', checkDbConnection, productRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

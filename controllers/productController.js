@@ -1,13 +1,11 @@
 const Product = require('../models/Product');
-const { Op } = require('sequelize');
+const { dbConnection } = require('../config/db');
 
 exports.getAllProducts = async (req, res) => {
   try {
     console.log('[ProductController] Starting getAllProducts request');
     
-    const products = await Product.findAll({
-      attributes: ['id', 'title', 'description', 'price', 'category', 'stock', 'img']
-    });
+    const [products] = await dbConnection.query('SELECT * FROM products');
 
     console.log(`[ProductController] Found ${products.length} products`);
     
@@ -26,8 +24,6 @@ exports.getAllProducts = async (req, res) => {
     });
   }
 };
-
-
 
 exports.getProductById = async (req, res) => {
   try {
