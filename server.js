@@ -14,25 +14,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS configuration
-const corsOptions = {
-  origin: 'https://equipo1-ecommerce-nuevo.vercel.app',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-};
-
-app.use(cors(corsOptions));
-
-// Additional CORS headers for all routes
+// CORS configuration - Apply before routes
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.status(200).end();
   }
+  
   next();
 });
 
@@ -58,8 +51,8 @@ const checkDbConnection = async (req, res, next) => {
   }
 };
 
-// Health check endpoint
-app.get('/health', (req, res) => {
+// Health check endpoint - Move before other routes
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
