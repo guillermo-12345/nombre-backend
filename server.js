@@ -1,95 +1,74 @@
-const express = require('express');
 const cors = require('cors');
+const express = require('express');
 const { testConnection } = require('./config/db');
 const productRoutes = require('./routes/productRoutes');
 require('dotenv').config();
 
 const app = express();
 
-// Enhanced logging middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Origin:', req.get('origin'));
-  console.log('Headers:', req.headers);
-  next();
-});
+// Configuración global de CORS
+app.use(cors({
+  origin: 'https://equipo1-ecommerce-nuevo.vercel.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
-// CORS configuration - Apply before routes
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://equipo1-ecommerce-nuevo.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
-
+// Middleware para procesar JSON
 app.use(express.json());
 
-// Database connection check middleware
+// Verificar conexión a la base de datos
 const checkDbConnection = async (req, res, next) => {
   try {
     const isConnected = await testConnection();
     if (!isConnected) {
       return res.status(503).json({
         error: 'Database connection not available',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
     next();
   } catch (error) {
-    console.error('[Database] Error:', error);
+    console.error('[Database] Error:', error.message);
     return res.status(503).json({
       error: 'Database error',
-      message: error.message
+      message: error.message,
     });
   }
 };
 
-// Health check endpoint - Move before other routes
+// Endpoint de salud
 app.get('/api/health', (req, res) => {
-  res.json({
+  res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      DATABASE_URL: process.env.DATABASE_URL ? 'Set' : 'Not set'
-    }
   });
 });
 
-// Apply routes with database check
+// Rutas de productos con verificación de base de datos
 app.use('/api/products', checkDbConnection, productRoutes);
 
-// Catch-all route for undefined routes
+// Middleware para manejar rutas no definidas
 app.use('*', (req, res) => {
-  console.log(`[404] Route not found: ${req.originalUrl}`);
   res.status(404).json({
     success: false,
     error: 'Not Found',
-    message: `Cannot ${req.method} ${req.originalUrl}`
+    message: `Cannot ${req.method} ${req.originalUrl}`,
   });
 });
 
-// Error handling middleware
+// Middleware para manejar errores globales
 app.use((err, req, res, next) => {
-  console.error('[Server] Error:', {
+  console.error('[Server Error]:', {
     message: err.message,
-    stack: err.stack
+    stack: err.stack,
   });
-
   res.status(500).json({
     success: false,
-    error: 'Internal server error',
+    error: 'Internal Server Error',
     message: err.message,
-    stack: process.env.NODE_ENV === 'production' ? '🥞' : err.stack
+    stack: process.env.NODE_ENV === 'production' ? '🥞' : err.stack,
   });
 });
 
 module.exports = app;
-

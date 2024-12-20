@@ -2,13 +2,15 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
 
-router.get('/', async (req, res, next) => {
+const { dbConnection } = require('../config/db');
+
+router.get('/', async (req, res) => {
   try {
-    console.log('[ProductRoutes] Attempting to fetch all products');
-    await productController.getAllProducts(req, res);
+    const [results] = await dbConnection.query('SELECT * FROM products');
+    res.status(200).json({ success: true, data: results });
   } catch (error) {
-    console.error('[ProductRoutes] Error in GET /:', error);
-    next(error);
+    console.error('[Products] Error fetching products:', error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
