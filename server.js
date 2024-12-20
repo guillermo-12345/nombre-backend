@@ -1,5 +1,5 @@
-const cors = require('cors');
 const express = require('express');
+const cors = require('cors');
 const { testConnection } = require('./config/db');
 const productRoutes = require('./routes/productRoutes');
 require('dotenv').config();
@@ -72,3 +72,5 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
+
+
