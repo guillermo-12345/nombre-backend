@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const { testConnection } = require('./config/db');
@@ -12,7 +11,6 @@ app.use((req, res, next) => {
   console.log(`[Request] ${req.method} ${req.url} - Time: ${new Date().toISOString()}`);
   next();
 });
-
 
 // Configuración global de CORS
 const allowedOrigins = [
@@ -34,7 +32,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-
 
 // Middleware para procesar JSON
 app.use(express.json());
@@ -67,14 +64,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Test endpoint working' });
-});
-
-
 // Rutas de productos con verificación de base de datos
-app.use('/api/products', productRoutes);
+app.use('/api/products', (req, res, next) => {
+  console.log('[Debug] /api/products route hit');
+  next();
+}, checkDbConnection, productRoutes);
 
+// Ruta mínima de prueba
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Test route is working' });
+});
 
 // Middleware para manejar rutas no definidas
 app.use('*', (req, res) => {
@@ -100,3 +99,4 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
+

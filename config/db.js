@@ -5,10 +5,6 @@ const dbConnection = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'mysql',
   dialectModule: require('mysql2'),
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false, // Solo si usas conexiones SSL
-    },
     connectTimeout: 60000, // Tiempo de espera extendido
   },
   logging: process.env.NODE_ENV === 'production' ? false : console.log,
