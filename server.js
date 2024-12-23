@@ -67,6 +67,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Test endpoint working' });
+});
+
+
 // Rutas de productos con verificación de base de datos
 app.use('/api/products', (req, res, next) => {
   console.log('[Debug] /api/products route hit');
