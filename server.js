@@ -73,10 +73,8 @@ app.get('/api/test', (req, res) => {
 
 
 // Rutas de productos con verificación de base de datos
-app.use('/api/products', (req, res, next) => {
-  console.log('[Debug] /api/products route hit');
-  next();
-}, checkDbConnection, productRoutes);
+app.use('/api/products', productRoutes);
+
 
 // Middleware para manejar rutas no definidas
 app.use('*', (req, res) => {
