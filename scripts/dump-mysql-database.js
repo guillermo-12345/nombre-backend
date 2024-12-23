@@ -3,7 +3,7 @@ const path = require('path');
 
 // Update these with your MySQL database details
 const DB_NAME = 'equipo1_ecommerce';
-const DB_USER = 'root';
+const DB_USER = 'admin';
 const DB_PASSWORD = 'pass';
 const DB_HOST = '34.39.135.236';
 const DB_PORT = '3306';
