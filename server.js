@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const cors = require('cors');
 const { testConnection } = require('./config/db');
@@ -6,22 +7,25 @@ require('dotenv').config();
 
 const app = express();
 
-// Configuración global de CORS
+// Middleware para logs globales
 app.use((req, res, next) => {
-  console.log('[CORS Debug] Origin:', req.headers.origin); // Verifica el origen de la solicitud
+  console.log(`[Request] ${req.method} ${req.url} - Time: ${new Date().toISOString()}`);
   next();
 });
 
+// Configuración global de CORS
+const allowedOrigins = [
+  'http://localhost:3000', // Desarrollo
+  'https://equipo1-ecommerce-nuevo.vercel.app', // Producción
+];
+
 app.use(cors({
   origin: (origin, callback) => {
-    console.log('[CORS Debug] Processing Origin:', origin); // Registra cada origen que intenta conectarse
-    const allowedOrigins = [
-      'http://localhost:3000', // Desarrollo
-      'https://equipo1-ecommerce-nuevo.vercel.app', // Producción
-    ];
-    if (allowedOrigins.includes(origin) || !origin) {
+    console.log('[CORS Debug] Incoming Origin:', origin);
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.error('[CORS Debug] Blocked Origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -29,7 +33,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-
 
 // Middleware para procesar JSON
 app.use(express.json());
@@ -64,7 +67,7 @@ app.get('/api/health', (req, res) => {
 
 // Rutas de productos con verificación de base de datos
 app.use('/api/products', (req, res, next) => {
-  console.log('[Debug] /api/products hit'); // Verifica si esta ruta se está alcanzando
+  console.log('[Debug] /api/products route hit');
   next();
 }, checkDbConnection, productRoutes);
 
@@ -77,8 +80,6 @@ app.use('*', (req, res) => {
   });
 });
 
-
-
 // Middleware para manejar errores globales
 app.use((err, req, res, next) => {
   console.error('[Server Error]:', {
@@ -89,10 +90,8 @@ app.use((err, req, res, next) => {
     success: false,
     error: 'Internal Server Error',
     message: err.message,
-    stack: process.env.NODE_ENV === 'production' ? '🥞' : err.stack,
+    ...(process.env.NODE_ENV === 'production' ? {} : { stack: err.stack }),
   });
 });
 
 module.exports = app;
-
-

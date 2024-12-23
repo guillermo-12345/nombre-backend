@@ -11,7 +11,7 @@ const dbConnection = new Sequelize(process.env.DATABASE_URL, {
     },
     connectTimeout: 60000, // Tiempo de espera extendido
   },
-  logging: console.log,
+  logging: process.env.NODE_ENV === 'production' ? false : console.log,
   pool: {
     max: 5,
     min: 0,
