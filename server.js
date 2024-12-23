@@ -13,6 +13,7 @@ app.use((req, res, next) => {
   next();
 });
 
+
 // Configuración global de CORS
 const allowedOrigins = [
   'http://localhost:3000', // Desarrollo
@@ -33,6 +34,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 
 // Middleware para procesar JSON
 app.use(express.json());

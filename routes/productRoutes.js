@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const productController = require('../controllers/productController'); // Importa correctamente el controlador
+const productController = require('../controllers/productController');
 
-// Define las rutas con los métodos del controlador
-router.get('/', productController.getAllProducts); // Asegúrate de que `getAllProducts` está definido
-router.get('/:id', productController.getProductById);
-router.post('/', productController.createProduct);
-router.put('/:id', productController.updateProduct);
-router.delete('/:id', productController.deleteProduct);
+// Rutas
+router.get('/', productController.getAllProducts); // Obtener todos los productos
+router.get('/:id', productController.getProductById); // Obtener un producto por ID
+router.post('/', productController.createProduct); // Crear un producto
+router.put('/:id', productController.updateProduct); // Actualizar un producto
+router.delete('/:id', productController.deleteProduct); // Eliminar un producto
 
 module.exports = router;

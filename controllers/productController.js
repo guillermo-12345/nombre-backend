@@ -3,6 +3,7 @@ const { dbConnection } = require('../config/db');
 const Product = require('../models/Product');
 
 exports.getAllProducts = async (req, res) => {
+  console.log('[Controller] Fetching all products');
   try {
     const [products] = await dbConnection.query('SELECT * FROM products');
     if (!products.length) {
@@ -10,15 +11,10 @@ exports.getAllProducts = async (req, res) => {
     }
     res.status(200).json({ success: true, data: products });
   } catch (error) {
-    console.error('[ProductController] Error in getAllProducts:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch products',
-      message: error.message,
-    });
+    console.error('[Controller] Error fetching products:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 exports.getProductById = async (req, res) => {
   try {
